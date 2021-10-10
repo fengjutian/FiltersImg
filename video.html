@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    html, body{
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <video src="" id='camera-shot-video'></video>
+  <button onclick='shot()'>Shot!!!</button>
+  <canvas id='camera-shot-canvas' width='500' height="500"></canvas>
+  <p>
+    <button onclick='resetImg()'>原图</button>
+    <button onclick='reverEffect()'>底片</button>
+    <button onclick='greyEffect()'>灰度</button>
+    <input type="range" id='diaphaneity' value='0' min='0' max='255' step='5' 
+      oninput='changeDiaphaneity()' >
+    <div>
+      <p>
+        <span>R</span>
+        <input type="range" id='diaphaneityR' value='0' min='0' max='255' step='5' 
+        oninput='changeDiaphaneityRGBA()' >
+      </p>
+      <p>
+        <span>G</span>
+        <input type="range" id='diaphaneityG' value='0' min='0' max='255' step='5' 
+        oninput='changeDiaphaneityRGBA()' >
+      </p>
+      <p>
+        <span>B</span>
+        <input type="range" id='diaphaneityB' value='0' min='0' max='255' step='5' 
+      oninput='changeDiaphaneityRGBA()' >
+      </p>
+      <p>
+        <span>A</span>
+        <input type="range" id='diaphaneityA' value='0' min='0' max='255' step='5' 
+      oninput='changeDiaphaneityRGBA()' >
+      </p>
+    </div>
+    <button onclick='downloadImg()'>下载图片</button>
+  </p>
+  <script>
+    let opt = {
+      audio: true,
+      video: {
+        width: '500',
+        height: '500'
+      }
+    }
+
+    navigator.mediaDevices.getUserMedia(opt).then((mediaStream) => {
+      let video = document.querySelector('#camera-shot-video')
+      video.srcObject = mediaStream
+      video.onloadedmetadata = function(e) {
+        video.play()
+      }
+    })
+
+    const canvasDom = document.querySelector('#camera-shot-canvas')
+    const canvas = canvasDom.getContext('2d')
+    const videoDom = document.querySelector('#camera-shot-video')
+    let curImgData = {}
+    // 拍照
+    function shot() {
+      // console.log('canvasDom', canvasDom)
+      // console.log('videoDom', videoDom)
+      canvasDom.getContext('2d').drawImage(videoDom,0, 0, 500, 500)
+      this.curImgData = canvas.getImageData(0, 0, canvasDom.width, canvasDom.height)
+      console.log('this.curImgData', this.curImgData)
+    }
+
+    // 下载
+    function downloadImg () {
+      let aLink = document.createElement('a')
+      aLink.href = canvasDom.toDataURL('image/png')
+      aLink.download = 'img'
+      aLink.click()
+    }
+
+    // 原图
+    function resetImg() {
+      canvas.putImageData(this.curImgData, 0, 0, 0, 0, canvasDom.width, canvasDom.height)
+    }
+
+    // canvas 滤镜
+    // 黑白
+    function greyEffect() {
+      // let imgData = JSON.parse(JSON.strigify(this.curImgData))
+      let imgData = canvas.getImageData(0, 0, canvasDom.width, canvasDom.height)
+      let pixelData = imgData.data
+      for (let i = 0; i <= canvasDom.width * canvasDom.height; i++) {
+        let r = pixelData[4*i + 0]
+        let g = pixelData[4*i + 1]
+        let b = pixelData[4*i + 2]
+        let grey = r*0.3 + g*0.59 + b*0.11
+        pixelData[4*i + 0] = grey
+        pixelData[4*i + 1] = grey
+        pixelData[4*i + 2] = grey
+      }
+      canvas.putImageData(imgData, 0, 0, 0, 0, canvasDom.width, canvasDom.height)
+    }
+
+    // 底片
+    function reverEffect() {
+      let imgData = canvas.getImageData(0, 0, canvasDom.width, canvasDom.height)
+      let pixelData = imgData.data
+      for (let i = 0; i <= canvasDom.width * canvasDom.height; i++) {
+        let r = pixelData[4*i + 0]
+        let g = pixelData[4*i + 1]
+        let b = pixelData[4*i + 2]
+
+        pixelData[4*i + 0] = 255 - r
+        pixelData[4*i + 1] = 255 - g
+        pixelData[4*i + 2] = 255 - b
+      }
+      canvas.putImageData(imgData, 0, 0, 0, 0, canvasDom.width, canvasDom.height)
+    }
+
+    // 透明度变化
+    function changeDiaphaneity () {
+      let alphaValue = document.querySelector('#diaphaneity').value
+      // console.log(document.querySelector('#diaphaneity').value)
+      let imgData = canvas.getImageData(0, 0, canvasDom.width, canvasDom.height)
+      let pixelData = imgData.data
+      for (let i = 0; i <= canvasDom.width * canvasDom.height; i++) {
+        let a = pixelData[4*i + 3]
+        pixelData[4*i + 3] = alphaValue
+      }
+      canvas.putImageData(imgData, 0, 0, 0, 0, canvasDom.width, canvasDom.height)
+    }
+
+    function changeDiaphaneityRGBA () {
+      let imgData = canvas.getImageData(0, 0, canvasDom.width, canvasDom.height)
+      let pixelData = imgData.data
+      let rValue = document.querySelector('#diaphaneityR').value
+      let gValue = document.querySelector('#diaphaneityG').value
+      let bValue = document.querySelector('#diaphaneityB').value
+      let aValue = document.querySelector('#diaphaneityA').value
+      for (let i = 0; i <= canvasDom.width * canvasDom.height; i++) {
+        let r = pixelData[4*i + 0]
+        let g = pixelData[4*i + 1]
+        let b = pixelData[4*i + 2]
+        let a = pixelData[4*i + 3]
+
+        pixelData[4*i + 0] = rValue
+        pixelData[4*i + 1] = gValue
+        pixelData[4*i + 2] = bValue
+        pixelData[4*i + 3] = aValue
+      }
+      canvas.putImageData(imgData, 0, 0, 0, 0, canvasDom.width, canvasDom.height)
+    }
+
+  </script>
+</body>
+</html>
